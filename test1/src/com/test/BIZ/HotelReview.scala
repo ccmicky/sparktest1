@@ -242,4 +242,48 @@ class HotelReview {
     new DB().InsertHotelKeyWordRelWordBatch(valueList.toList)
   }
 
+  // batch insert KeyWord RelWord into DB from File
+  //modified by ccmicky
+  def InsertRelWordDataFromSc(HDFSPath: String,sc: SparkContext) = {
+    print(HDFSPath)
+    val conf = new Configuration()
+    val fs = FileSystem.get(URI.create(HDFSPath), conf).listStatus(new Path(HDFSPath))
+    val listPath = FileUtil.stat2Paths(fs)
+
+    //var content: String = ""
+
+    for (p <- listPath) {
+      var index = 0
+      var values = ""
+      val batchLenght = 990
+      if (p.getName != "_SUCCESS") {
+        print(p)
+        //content = new FileMethod().GetHDFSFileContent(HDFSPath, p)
+        val content = sc.textFile(HDFSPath+p.getName)
+
+
+        val dataList = content.map{line =>
+          val lines = line.split('(').tail.head
+          val newline = lines.split(')').head
+          val datas = newline.split(':')
+          val total = newline.split(',').tail.head
+          "('" + datas(1) + "' ,'" + datas(2) + "' ,'" + datas(3) + "',0 ,GetDate() ," +total + " )"
+        }
+
+        dataList.foreach(line => {
+          values += line + ","
+          index += 1
+          if (index > batchLenght) {
+            new DB().InsertRelWordBatch(values)
+            index = 0
+            values = ""
+          }
+        })
+      }
+      if (values.length > 0) {
+        new DB().InsertRelWordBatch(values)
+      }
+    }
+  }
+
 }
