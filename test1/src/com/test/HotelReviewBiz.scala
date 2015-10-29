@@ -176,13 +176,24 @@ object HotelReviewBiz {
 
     val startInitRDDTime = new Date()
     println(">>>>>>>>>>>>>StartInitRDDTime:" + startInitRDDTime)
+
     val hrRDD = hr.InitRDD(sc)
+
+    val list: Seq[KeyWordRelWordEntity] = new DB().GetKeyWordsRelWordList()
+
+    val hkrList:RDD[(String,Int)] = hr.GetHotelKeyWordRelWordRDD(hrRDD, list.toList)
+    hr.InsertHotelRelWordDataFromFile(hkrList)
+
+
+
+
+
 
 
 
     //hrRDD.saveAsObjectFile("hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj.txt")
 
-    println(">>>>>>>>>>>>>>>>>>>startTime::" + startTime + "   startInitRDDTime:" +  startInitRDDTime + " CurDateTime：" +(new Date) )
+   /* println(">>>>>>>>>>>>>>>>>>>startTime::" + startTime + "   startInitRDDTime:" +  startInitRDDTime + " CurDateTime：" +(new Date) )
 
 
     var cmd:String  = new CommMethod().WaitCommand();
@@ -193,7 +204,7 @@ object HotelReviewBiz {
       println(time1  )
       println(new Date())
       cmd = new CommMethod().WaitCommand();
-    }
+    }*/
 
     // hr.GenKeyWordRelWordData(hrRDD, targetFilePath, targetFileName)
 
@@ -256,7 +267,7 @@ object HotelReviewBiz {
       "(" + hr.hotelid + " ,'" + hr.KeyWord + "' ,'" + hr.RelWord + "','" + hr.RelWordPOS + "','" + hr.ADV + "','" + hr.ADVPOS + "','" + hr.NO + "','" + hr.NOPOS + "' )";
     }).toList
 
-    var index = 0
+    /*var index = 0
     var values = ""
     val batchLenght = 500
     dataList.foreach(line => {
@@ -271,7 +282,7 @@ object HotelReviewBiz {
 
     if (values.length > 0) {
       new DB().InsertHotelKeyWordRelWordBatch(values)
-    }
+    }*/
 
 
 

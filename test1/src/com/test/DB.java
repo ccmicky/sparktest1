@@ -79,31 +79,62 @@ public class DB {
 
     }
 
-    public void InsertRelWordBatch(String  values )
+    public void InsertRelWordBatch(List<String>  valueList )
     {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);
-
-        values = values.substring(0, values.length()-1);
 
         String sql = "INSERT INTO [dbo].[KeyWordRelWords]([KeyWord] ,[RelWord]  ,[RelWordPOS]  ,[State]  ,[CreateTime] ,[Total]) VALUES";
-
-        System.out.println(sql + values);
-
-        conn.ExecuteUpdate(sql + values);
+        for(String values : SplitValuesForBatch(valueList)) {
+            System.out.println(sql + values);
+            conn.ExecuteUpdate(sql + values);
+        }
     }
 
-    public void InsertHotelKeyWordRelWordBatch(String  values )
+    public void InsertHotelKeyWordRelWordBatch(List<String> valueList )
     {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);
-
-        values = values.substring(0, values.length()-1);
 
         String sql = "INSERT INTO [dbo].[HotelKeyWordRelWord]([HotelID] ,[KeyWord] ,[RelWord],[RelWordPOS] ,[ADV] ,[ADVPOS],[NO],[NOPOS])  VALUES";
 
-        System.out.println(sql + values);
+        for(String values : SplitValuesForBatch(valueList)) {
+            System.out.println(sql + values);
+            conn.ExecuteUpdate(sql + values);
+        }
+    }
 
-        conn.ExecuteUpdate(sql + values);
+    public  List<String> SplitValuesForBatch(List<String> values )
+    {
+        List<String> list=new ArrayList<String>();
+
+        int lenght = 900;
+        int index = 0;
+        StringBuilder sb = new StringBuilder();
+        for(String str : values )
+        {
+            index++;
+            sb.append(str);
+
+            if(index > lenght)
+            {
+                list.add(sb.toString());
+                index = 0;
+                sb = new StringBuilder();
+            }
+            else
+            {
+                sb.append(",");
+            }
+
+        }
+
+        if( sb.length() > 0)
+        {
+            list.add(sb.toString().substring(0, sb.toString().length() -1));
+        }
+
+        return list;
+
     }
 }
