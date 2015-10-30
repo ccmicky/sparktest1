@@ -8,8 +8,9 @@ import com.test.{CommMethod, DB}
 import com.test.Entity._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileUtil, Path, FileSystem}
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 
 import scala.collection.JavaConversions._
 
@@ -27,16 +28,19 @@ class HotelReview {
 
 
   def InitRDD( sc: SparkContext):RDD[ShortSentence] = {
+
     val hrRDD:RDD[ShortSentence] = sc.objectFile(savedObjectFileName)
-   // hrRDD.persist( StorageLevel(false,true,false,true,1))
-    hrRDD.cache()
+    //hrRDD.persist( StorageLevel(false,true,false,true,1))
+    //hrRDD.persist(StorageLevel.MEMORY_ONLY)
     hrRDD
   }
 
   //获取按酒店统计的词出现次数
   def GetHotelWordCountRDD(hrRDD:RDD[ShortSentence], wordsList:List[String]):RDD[(String,Int)]=
   {
+  //  hrRDD.flatMap(hr=> ( for( item <- hr.RelList if wordsList.contains(item.Word2  )) yield (hr.hotelid +":"+item.Word2,1) )).reduceByKey(_+_)
     hrRDD.flatMap(hr=> ( for( item <- hr.RelList if wordsList.contains(item.Word2  )) yield (hr.hotelid +":"+item.Word2,1) )).reduceByKey(_+_)
+
   }
 
   def GetHotelKeyWordRelWordRDD( hrRDD:RDD[ShortSentence] ,keyWordList:  List[String]):RDD[(String,Int)] = {
@@ -271,43 +275,29 @@ class HotelReview {
   //modified by ccmicky
   def InsertRelWordDataFromSc(HDFSPath: String,sc: SparkContext) = {
     print(HDFSPath)
-    val conf = new Configuration()
-    val fs = FileSystem.get(URI.create(HDFSPath), conf).listStatus(new Path(HDFSPath))
-    val listPath = FileUtil.stat2Paths(fs)
-
-    //var content: String = ""
-
-    for (p <- listPath) {
-      var index = 0
-      var values = ""
-      val batchLenght = 990
-      if (p.getName != "_SUCCESS") {
-        print(p)
-        //content = new FileMethod().GetHDFSFileContent(HDFSPath, p)
-        val content = sc.textFile(HDFSPath+p.getName)
-
-
-        val dataList = content.map{line =>
-          val lines = line.split('(').tail.head
-          val newline = lines.split(')').head
-          val datas = newline.split(':')
-          val total = newline.split(',').tail.head
-          "('" + datas(1) + "' ,'" + datas(2) + "' ,'" + datas(3) + "',0 ,GetDate() ," +total + " )"
-        }
-
-        dataList.foreach(line => {
-          values += line + ","
-          index += 1
-          if (index > batchLenght) {
-            new DB().InsertRelWordBatch(values)
-            index = 0
-            values = ""
-          }
-        })
-      }
-      if (values.length > 0) {
+    var index = 0
+    var values = ""
+    val batchLenght = 990
+    val content = sc.textFile(HDFSPath)
+    val dataList = content.map { line =>
+      val lines = line.split('(').tail.head
+      val newline = lines.split(')').head
+      val datas = newline.split(':')
+      val total = newline.split(',').tail.head
+      //println(">>>>>>>>>>>>>>>>>>>>>>>>>>>"+datas(1)+","+datas(2)+","+datas(3))
+      "('" + datas(1) + "' ,'" + datas(2) + "' ,'" + datas(3) + "',0 ,GetDate() ," + total + " )"
+    }
+    dataList.collect().foreach(line => {
+      values += line + ","
+      index += 1
+      if (index > batchLenght) {
         new DB().InsertRelWordBatch(values)
+        index = 0
+        values = ""
       }
+    })
+    if (values.length > 0) {
+      new DB().InsertRelWordBatch(values)
     }
   }
 
