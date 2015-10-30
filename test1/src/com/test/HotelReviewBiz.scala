@@ -11,6 +11,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileUtil, Path, FileSystem}
 import org.apache.spark
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.Predef
@@ -23,34 +24,19 @@ import scala.io.Source
 object HotelReviewBiz {
 
   def RDDCcount(cmd: String , hrRDD: RDD[ShortSentence] )=  {
-
-    val  maxHotelID = cmd.toInt
-    println(">>>>>>>>>>>>>>>>>>>>>>>> Hotel Count:" +  hrRDD.filter(hr=> hr.hotelid  < maxHotelID).count() )
-
+    test2();
   }
 
   def main(args: Array[String]) {
-      run_GenKeyWordRelWord()
+     run_GenKeyWordRelWord()
 
 
- return
-
-    test2();
-    return
-
-    val sparkConfig = new SparkConf().set("spark.driver.allowMultipleContexts", "true")
-    val sc = new SparkContext(sparkConfig)
-
-    val hrRDD :RDD[ShortSentence]  = InitRDD(sc)
-
-     var cmd:String  = new CommMethod().WaitCommand();
-    while(cmd !="Q")
-    {
-       RDDCcount(cmd,hrRDD);
-      cmd = new CommMethod().WaitCommand();
-
-    }
-
+     return
+    //val values = "('你好','再见','NN',0,GetDate(),1),"
+    //new DB().InsertRelWordBatch(values)
+    //val sc = new SparkContext()
+    //val hr = new HotelReview
+    //hr.InsertRelWordDataFromSc(args(0),sc)
   }
 
 
@@ -156,14 +142,19 @@ object HotelReviewBiz {
     // Make sure to set these properties *before* creating a SparkContext!
     System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     System.setProperty("spark.kryo.registrator", "com.test.Comm.HotelReviewKryoRegistrator")
+    System.setProperty("spark.storage.memoryFraction", "0.7")
+    //set the way of serializer
+    val conf = new SparkConf()
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    conf.set("spark.kryoserializer.buffer","4")
 
-    val sc = new SparkContext()
+    val sc = new SparkContext(conf)
 
     val soruceFilePath: String = "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt"// "hdfs://hadoop:8020/spark/hotelReview2/610.txt" // "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt"
     /*    val targetFilePath: String = "hdfs://hadoop:8020/spark/test/"
         val targetFileName: String = "6.txt"*/
 
-
+    //val soruceFilePath :String ="hdfs://hadoop:8020/spark/test"
     val startTime = new Date()
     println(">>>>>>>>>>>>>StartTime:" + startTime)
 
@@ -175,8 +166,12 @@ object HotelReviewBiz {
     //println(">>>>>>>>>>>>>>> hrRDD Count：" + hrRDD.count())
 
     val startInitRDDTime = new Date()
+    //val hrRDD = sc.textFile(soruceFilePath)
     println(">>>>>>>>>>>>>StartInitRDDTime:" + startInitRDDTime)
+
     val hrRDD = hr.InitRDD(sc)
+    //use serialize to cache in the memory
+    hrRDD.persist(StorageLevel.MEMORY_ONLY_SER)
 
 
 
@@ -189,7 +184,8 @@ object HotelReviewBiz {
     while(cmd !="Q")
     {
       val time1 = new Date()
-      println(cmd + " Count :" + hr.GetHotelWordCountRDD(hrRDD, cmd.split(",").toList).count())
+      //println(cmd + " Count :" + hr.GetHotelWordCountRDD(hrRDD, cmd.split(",").toList).count())
+      println(hrRDD.count())
       println(time1  )
       println(new Date())
       cmd = new CommMethod().WaitCommand();
