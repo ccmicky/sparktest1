@@ -2,6 +2,7 @@ package com.test;
 
 import com.test.Entity.KeyWordEntity;
 import com.test.Entity.KeyWordRelWordEntity;
+import com.test.Entity.SparkCmdEntity;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,7 +16,42 @@ public class DB {
     public final String ConnectionString113 = "jdbc:sqlserver://192.168.1.113:1433;DatabaseName=CommentDB;User=DataAnalysis;Password=DataAnalysis01!";
     public final String ConnectionString114 = "jdbc:sqlserver://192.168.1.114:1433;DatabaseName=CommentDB;User=DataAnalysis;Password=DataAnalysis01!";
 
+    public  List<SparkCmdEntity>  GetTaskCmdList() throws SQLException {
+        DBHelper conn = new DBHelper();
+        conn.OpenConnection(ConnectionString114);
+        ResultSet rset = conn.ExecuteQuery("select * from SparkCmd where State=0");
+        List<SparkCmdEntity> list = new ArrayList<SparkCmdEntity>();
+        while(rset.next()) {
+            SparkCmdEntity sce = new SparkCmdEntity();
+            sce.IDX = rset.getInt("IDX");
+            sce.Type = rset.getInt("Type");
+            sce.Description= rset.getString("Description");
+            sce.State = rset.getInt("Type");
+            sce.InputData= rset.getString("InputData");
+            sce.Creator= rset.getString("Creator");
+            sce. CreateTime= rset.getString("CreateTime");
+            sce.StartTime= rset.getString("StartTime");
+            sce.EndTime= rset.getString("EndTime");
+            list.add(sce);
+        }
+        return list;
+    }
 
+    public void UpdateTaskCmd(List<SparkCmdEntity> list)
+    {
+
+        DBHelper conn = new DBHelper();
+        conn.OpenConnection(ConnectionString114);
+
+
+        for(SparkCmdEntity e :list)
+        {
+            String sql = "Update SparkCmd  Set State=" + e.State + " , StartTime = '" + e.StartTime + "' , EndTime='" + e.EndTime +"' WHERE　IDX=" + e.IDX;
+
+            System.out.println(sql);
+            conn.ExecuteUpdate(sql);
+        }
+    }
 
     public  List<KeyWordEntity>  GetKeyWordsList() throws SQLException {
         DBHelper conn = new DBHelper();
@@ -39,7 +75,7 @@ public class DB {
     public  List<KeyWordRelWordEntity>  GetKeyWordsRelWordList() throws SQLException {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);
-        ResultSet rset = conn.ExecuteQuery("select * from KeyWordRelWords where State=1");
+        ResultSet rset = conn.ExecuteQuery("select * from KeyWordRelWords where State=1 and keyWord='原生态'" );
 
         List<KeyWordRelWordEntity> list = new ArrayList<KeyWordRelWordEntity>();
 
@@ -57,51 +93,33 @@ public class DB {
     }
 
 
-
-    public void InsertRelWordData( String str, int i )
-    {
-        System.out.println(str);
-        String [] sp = str.split(":");
-        if(sp.length==3) {
-           InsertRelWord(sp[0], sp[1], sp[2], i);
-        }
-    }
-
-    public void InsertRelWord(String KeyWord,String RelWord, String RelWordPOS,int count)
+    public  void BatchInsert(List<String>  valueList, String sql)
     {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);
 
-        String sql = "INSERT INTO [dbo].[KeyWordRelWords]([KeyWord] ,[RelWord  ,[RelWordPOS]  ,[State]  ,[CreateTime] ,[Total]) VALUES ('" + KeyWord + "' ,'" + RelWord + "' ,'" +RelWordPOS +"',0 ,GetDate() ," +  String.valueOf(count) +" )";
+        for(String values : SplitValuesForBatch(valueList)) {
+            System.out.println(sql + values);
+            conn.ExecuteUpdate(sql + values);
+        }
+    }
 
-        System.out.println(sql);
-        conn.ExecuteUpdate(sql);
-
+    public void InsertHotelKeyWordCountBatch(List<String>  valueList  )
+    {
+        String sql = "INSERT INTO [dbo].[HotelKeyWordCount] ([hotelid] ,[KeyWord] ,[NO] ,[Total]) VALUES";
+        BatchInsert(valueList,sql);
     }
 
     public void InsertRelWordBatch(List<String>  valueList )
     {
-        DBHelper conn = new DBHelper();
-        conn.OpenConnection(ConnectionString114);
-
         String sql = "INSERT INTO [dbo].[KeyWordRelWords]([KeyWord] ,[RelWord]  ,[RelWordPOS]  ,[State]  ,[CreateTime] ,[Total]) VALUES";
-        for(String values : SplitValuesForBatch(valueList)) {
-            System.out.println(sql + values);
-            conn.ExecuteUpdate(sql + values);
-        }
+        BatchInsert(valueList,sql);
     }
 
     public void InsertHotelKeyWordRelWordBatch(List<String> valueList )
     {
-        DBHelper conn = new DBHelper();
-        conn.OpenConnection(ConnectionString114);
-
         String sql = "INSERT INTO [dbo].[HotelKeyWordRelWord]([HotelID] ,[KeyWord] ,[RelWord],[RelWordPOS] ,[ADV] ,[ADVPOS],[NO],[NOPOS])  VALUES";
-
-        for(String values : SplitValuesForBatch(valueList)) {
-            System.out.println(sql + values);
-            conn.ExecuteUpdate(sql + values);
-        }
+        BatchInsert(valueList,sql);
     }
 
     public  List<String> SplitValuesForBatch(List<String> values )

@@ -3,6 +3,7 @@ package com.test;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
+import java.util.Date;
 import java.util.Scanner;
 
 /**
@@ -10,6 +11,10 @@ import java.util.Scanner;
  */
 public class CommMethod {
 
+    public String FormatDate(Date d )
+    {
+        return d.toLocaleString();
+    }
 
     public String WaitCommand()
     {

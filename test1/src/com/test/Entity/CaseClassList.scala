@@ -9,3 +9,5 @@ case class RelItem(Rel:String, Word1:String,w1POS:String, w1Index:Int, Word2:Str
 case class ShortSentence(idx:Long, hotelid:Int, writing:Int,RelList:List[RelItem]  )
 
 case class HotelKeyWordRelWord(hotelid:Int, KeyWord:String, RelWord:String, RelWordPOS:String, ADV:String, ADVPOS:String, NO:String , NOPOS:String)
+
+case class HotelWordCount(hotelid:Int, KeyWord:String, NO:String, Total:Int)

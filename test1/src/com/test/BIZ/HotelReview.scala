@@ -1,6 +1,7 @@
 package com.test.BIZ
 
 import java.net.URI
+import java.util
 import java.util.Date
 
 import com.test.Comm.FileMethod
@@ -18,12 +19,59 @@ import scala.collection.JavaConversions._
  */
 class HotelReview {
 
+  def CalKeyWordRelWord(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity])=
+  {
+    val StartTime = new Date
+    val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
+    val krList =  GetKeyWordRelWordRDD(hrRDD,list)
+    InsertRelWordData(krList)
+
+    UpdateSparCmdEntity(typeCmdList, StartTime)
+  }
+
+  def UpdateSparCmdEntity(typeCmdList: Seq[SparkCmdEntity], StartTime: Date) = {
+    typeCmdList.foreach(c=> {
+      c.StartTime = new CommMethod().FormatDate(StartTime)
+      c.EndTime = new CommMethod().FormatDate(new Date())
+      c.State = 1
+    }
+    )
+    new DB().UpdateTaskCmd(typeCmdList)
+  }
+
+  def CalHotelKeyWordRelWord(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+
+    val StartTime = new Date
+    val list: List[KeyWordRelWordEntity] = typeCmdList.flatMap(cmd => cmd.InputData.split(";").map(line => {
+      val data = line.split(";")
+      val e = new KeyWordRelWordEntity()
+      e.KeyWord = data(0)
+      e.RelWord = data(1)
+      e.RelWordPOS = data(2)
+      e
+    })).toList
+
+    val hkrList: RDD[(String, Int)] = GetHotelKeyWordRelWordRDD(hrRDD, list.toList)
+    InsertHotelRelWordData(hkrList)
+
+    UpdateSparCmdEntity(typeCmdList, StartTime)
+  }
+
+  def CalHotelKeyWordCount(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+    val StartTime = new Date
+    val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
+
+    val hkcList: RDD[(String, Int)] =GetHotelWordCount(hrRDD,list)
+    InsertHotelKeyWordCountData(hkcList)
+
+    UpdateSparCmdEntity(typeCmdList, StartTime)
+  }
+
+
   val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
   val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
 
   val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
-
-  val NOList = List("不", "没", "否", "不太", "没有", "除了")
 
 
   def InitRDD(sc: SparkContext): RDD[ShortSentence] = {
@@ -39,12 +87,12 @@ class HotelReview {
   }
 
   def GenHotelKeyWordRelWordEntity1(hr: ShortSentence, item: RelItem): HotelKeyWordRelWord = {
-    val ADV_NO = GetADVAndNO(hr, item.Word1, item.Word2)
+    val ADV_NO = new HRCommMethod().GetADVAndNO(hr, item.Word1, item.Word2)
     HotelKeyWordRelWord(hr.hotelid, item.Word1, item.Word2, item.w2POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
   }
 
   def GenHotelKeyWordRelWordEntity2(hr: ShortSentence, item: RelItem): HotelKeyWordRelWord = {
-    val ADV_NO = GetADVAndNO(hr, item.Word2, item.Word1)
+    val ADV_NO = new HRCommMethod().GetADVAndNO(hr, item.Word2, item.Word1)
     HotelKeyWordRelWord(hr.hotelid, item.Word2, item.Word1, item.w1POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
   }
 
@@ -62,6 +110,26 @@ class HotelReview {
     relWordList.map(s => (s.hotelid + ":" + s.KeyWord + ":" + s.RelWord + ":" + s.RelWordPOS + ":" + s.ADV + ":" + s.ADVPOS + ":" + s.NO + ":" + s.NOPOS, 1)).reduceByKey(_ + _)
 
   }
+
+
+  //计算某些词在酒店中的命中数量
+  def GetHotelWordCount(hrRDD: RDD[ShortSentence], keyWordList: List[String]): RDD[(String, Int)] = {
+
+    val ssKey1 = hrRDD.flatMap(hr => for (item <- hr.RelList if (keyWordList.contains(item.Word2))) yield (hr, item))
+
+    val countWordList = ssKey1.map(hi => {
+      val hr = hi._1
+      val item = hi._2
+      val NO = new HRCommMethod().GetNO(hr, item.Word1)
+      HotelWordCount(hr.hotelid, item.Word2, NO, 1)
+    })
+
+    countWordList.map(item => (item.hotelid + ":" + item.KeyWord + ":" + item.NO, 1)).reduceByKey(_ + _)
+  }
+
+
+
+
 
   //获取词的出现次数
   def GetWordCountRDD(hrRDD: RDD[ShortSentence], wordsList: List[String]): RDD[(String, Int)] = {
@@ -99,36 +167,6 @@ class HotelReview {
   }
 
 
-  def GetADVAndNO(hr: ShortSentence, KeyWord: String, RelWord: String): (String, String, String, String) = {
-    var ADV: String = ""
-    var NO: String = ""
-    var ADVPOS: String = ""
-    var NOPOS: String = ""
-    for (item <- hr.RelList) {
-      if (item.Word1 == RelWord && item.Word2 != KeyWord) {
-        if (item.w2POS == "AD") {
-          ADV = item.Word2
-          ADVPOS = item.w2POS
-        }
-        if (NOList.contains(item.Word2)) {
-          NO = item.Word2
-          NOPOS = item.w2POS
-        }
-      }
-      else if (item.Word2 == RelWord && item.Word1 != KeyWord) {
-        if (item.w1POS == "AD") {
-          ADV = item.Word1
-          ADVPOS = item.w1POS
-        }
-        if (NOList.contains(item.Word1)) {
-          NO = item.Word1
-          NOPOS = item.w1POS
-        }
-      }
-    }
-
-    (ADV, ADVPOS, NO, NOPOS)
-  }
 
 
   def parseWordItem(str: String): List[WordItem] = {
@@ -224,66 +262,33 @@ class HotelReview {
 
 
   // batch insert KeyWord RelWord into DB from File
-  def InsertRelWordDataFromFile(dataList: RDD[(String, Int)]) = {
+  def InsertRelWordData(dataList: RDD[(String, Int)]) = {
     val valueList = dataList.map(line => {
-      val datas = line._1.split(":")
+      val datas = line._1.split(":",-1)
       "('" + datas(0) + "' ,'" + datas(1) + "' ,'" + datas(2) + "',0 ,GetDate() ," + line._2 + " )";
     }).collect()
 
     new DB().InsertRelWordBatch(valueList.toList)
   }
 
-  def InsertHotelRelWordDataFromFile(dataList: RDD[(String, Int)]) = {
-    val valueList = dataList.map(line => {
-      val datas = line._1.split(":")
+  def InsertHotelRelWordData(dataList: RDD[(String, Int)]) = {
+    val valueList = dataList.collect().map(line => {
+      println(line)
+      val datas = line._1.split(":",-1)
       "(" + datas(0) + " ,'" + datas(1) + "' ,'" + datas(2) + "','" + datas(3) + "','" + datas(4) + "','" + datas(5) + "','" + datas(6) + "','" + line._2 + "' )"
-    }).collect()
+    })
 
     new DB().InsertHotelKeyWordRelWordBatch(valueList.toList)
   }
 
-  // batch insert KeyWord RelWord into DB from File
-  //modified by ccmicky
-  def InsertRelWordDataFromSc(HDFSPath: String,sc: SparkContext) = {
-    print(HDFSPath)
-    val conf = new Configuration()
-    val fs = FileSystem.get(URI.create(HDFSPath), conf).listStatus(new Path(HDFSPath))
-    val listPath = FileUtil.stat2Paths(fs)
+  def InsertHotelKeyWordCountData(dataList: RDD[(String, Int)]) = {
+    val valueList = dataList.collect().map(line => {
+      println(line)
+      val datas = line._1.split(":",-1)
+      "(" + datas(0) + " ,'" + datas(1) + "' ,'" + datas(2) + "','" +  line._2 + "' )"
+    })
 
-    //var content: String = ""
-
-    for (p <- listPath) {
-      var index = 0
-      var values = ""
-      val batchLenght = 990
-      if (p.getName != "_SUCCESS") {
-        print(p)
-        //content = new FileMethod().GetHDFSFileContent(HDFSPath, p)
-        val content = sc.textFile(HDFSPath+p.getName)
-
-
-        val dataList = content.map{line =>
-          val lines = line.split('(').tail.head
-          val newline = lines.split(')').head
-          val datas = newline.split(':')
-          val total = newline.split(',').tail.head
-          "('" + datas(1) + "' ,'" + datas(2) + "' ,'" + datas(3) + "',0 ,GetDate() ," +total + " )"
-        }
-
-        dataList.foreach(line => {
-          values += line + ","
-          index += 1
-          if (index > batchLenght) {
-            new DB().InsertRelWordBatch(values)
-            index = 0
-            values = ""
-          }
-        })
-      }
-      if (values.length > 0) {
-        new DB().InsertRelWordBatch(values)
-      }
-    }
+    new DB().InsertHotelKeyWordCountBatch(valueList.toList)
   }
 
 }
