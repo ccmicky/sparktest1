@@ -4,7 +4,7 @@ import java.io.{PushbackInputStream, File}
 import java.net.URI
 import java.util
 import java.util.Date
-import com.test.BIZ.{HRCommMethod, HotelReview}
+import com.test.BIZ.HotelReview
 import com.test.Comm.FileMethod
 import com.test.Entity._
 import org.apache.hadoop.conf.Configuration
@@ -30,10 +30,10 @@ object HotelReviewBiz {
   }
 
   def main(args: Array[String]) {
-    autoRun()
+      run_GenKeyWordRelWord()
 
-    run_GenKeyWordRelWord()
-    return
+
+ return
 
     test2();
     return
@@ -149,44 +149,6 @@ object HotelReviewBiz {
 
   }
 
-  def autoRun(): Unit =
-  {
-    System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    System.setProperty("spark.kryo.registrator", "com.test.Comm.HotelReviewKryoRegistrator")
-
-    val sc = new SparkContext()
-
-    val hr = new HotelReview();
-    val hrRDD = hr.InitRDD(sc)
-
-    while(true)
-    {
-      val cmdList: Seq[SparkCmdEntity] =  new DB().GetTaskCmdList()
-
-      if( cmdList.length > 0) {
-
-        println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> New Command <<<<<<<<<<<<<<<<<<<<<<<<<<<")
-        cmdList.foreach(c=>println(c.IDX + ":" + c.Type + ":" + c.Description + ":" + c.InputData))
-
-        val cmdTypeList = cmdList.map(c => c.Type).distinct
-
-        cmdTypeList.foreach(typeID => {
-          val typeCmdList = cmdList.filter(o => o.Type == typeID)
-          typeID match {
-            case 1 => hr.CalHotelKeyWordCount(hrRDD, typeCmdList)
-            case 2 => hr.CalHotelKeyWordRelWord(hrRDD, typeCmdList)
-            case 3 => hr.CalKeyWordRelWord(hrRDD, typeCmdList)
-          }
-
-        })
-      }
-
-      print(".")
-
-      Thread.sleep(5000)
-    }
-
-  }
 
   def run_GenKeyWordRelWord(): Unit = {
 
@@ -214,46 +176,13 @@ object HotelReviewBiz {
 
     val startInitRDDTime = new Date()
     println(">>>>>>>>>>>>>StartInitRDDTime:" + startInitRDDTime)
-
     val hrRDD = hr.InitRDD(sc)
 
-/*
-   val krList =  hr.GetKeyWordRelWordRDD(hrRDD,List("原生态"))
-    hr.InsertRelWordData(krList)
-*/
-
-    val list: Seq[KeyWordRelWordEntity] = new DB().GetKeyWordsRelWordList()
-
-    val hkrList:RDD[(String,Int)] = hr.GetHotelKeyWordRelWordRDD(hrRDD, list.toList)
-    hr.InsertHotelRelWordData(hkrList)
 
 
     //hrRDD.saveAsObjectFile("hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj.txt")
 
     println(">>>>>>>>>>>>>>>>>>>startTime::" + startTime + "   startInitRDDTime:" +  startInitRDDTime + " CurDateTime：" +(new Date) )
-
-    while(true)
-      {
-        val cmdList: Seq[SparkCmdEntity] =  new DB().GetTaskCmdList()
-
-        if( cmdList.length > 0) {
-          val cmdTypeList = cmdList.map(c => c.Type).distinct
-
-          cmdTypeList.foreach(typeID => {
-            val typeCmdList = cmdList.filter(o => o.Type == typeID)
-            typeID match {
-              case 1 => hr.CalHotelKeyWordCount(hrRDD, typeCmdList)
-              case 2 => hr.CalHotelKeyWordRelWord(hrRDD, typeCmdList)
-              case 3 => hr.CalKeyWordRelWord(hrRDD, typeCmdList)
-            }
-
-          })
-        }
-
-        print(".")
-
-        Thread.sleep(5000)
-      }
 
 
     var cmd:String  = new CommMethod().WaitCommand();
@@ -308,12 +237,12 @@ object HotelReviewBiz {
       val item = hi._2
 
         if (krList.contains(item.Word1 + ":" + item.Word2 + ":" + item.w2POS)) {
-          val ADV_NO =  new HRCommMethod().GetADVAndNO(hr, item.Word1, item.Word2)
+          val ADV_NO =  hrc.GetADVAndNO(hr, item.Word1, item.Word2)
           HotelKeyWordRelWord(hr.hotelid, item.Word1, item.Word2, item.w2POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
 
         }
         else {
-          val ADV_NO = new HRCommMethod().GetADVAndNO(hr, item.Word2, item.Word1)
+          val ADV_NO = hrc.GetADVAndNO(hr, item.Word2, item.Word1)
             HotelKeyWordRelWord(hr.hotelid, item.Word2, item.Word1, item.w1POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
         
         }
@@ -327,7 +256,7 @@ object HotelReviewBiz {
       "(" + hr.hotelid + " ,'" + hr.KeyWord + "' ,'" + hr.RelWord + "','" + hr.RelWordPOS + "','" + hr.ADV + "','" + hr.ADVPOS + "','" + hr.NO + "','" + hr.NOPOS + "' )";
     }).toList
 
-    /*var index = 0
+    var index = 0
     var values = ""
     val batchLenght = 500
     dataList.foreach(line => {
@@ -342,7 +271,7 @@ object HotelReviewBiz {
 
     if (values.length > 0) {
       new DB().InsertHotelKeyWordRelWordBatch(values)
-    }*/
+    }
 
 
 
