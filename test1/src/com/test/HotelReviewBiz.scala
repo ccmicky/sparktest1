@@ -4,7 +4,7 @@ import java.io.{PushbackInputStream, File}
 import java.net.URI
 import java.util
 import java.util.Date
-import com.test.BIZ.HotelReview
+import com.test.BIZ.{HRCommMethod, HotelReview}
 import com.test.Comm.FileMethod
 import com.test.Entity._
 import org.apache.hadoop.conf.Configuration
@@ -22,18 +22,18 @@ import scala.io.Source
  */
 object HotelReviewBiz {
 
-  def RDDCcount(cmd: String , hrRDD: RDD[ShortSentence] )=  {
+  def RDDCcount(cmd: String, hrRDD: RDD[ShortSentence]) = {
 
-    val  maxHotelID = cmd.toInt
-    println(">>>>>>>>>>>>>>>>>>>>>>>> Hotel Count:" +  hrRDD.filter(hr=> hr.hotelid  < maxHotelID).count() )
+    val maxHotelID = cmd.toInt
+    println(">>>>>>>>>>>>>>>>>>>>>>>> Hotel Count:" + hrRDD.filter(hr => hr.hotelid < maxHotelID).count())
 
   }
 
   def main(args: Array[String]) {
-      run_GenKeyWordRelWord()
+    run_GenKeyWordRelWord()
 
 
- return
+    return
 
     test2();
     return
@@ -41,12 +41,11 @@ object HotelReviewBiz {
     val sparkConfig = new SparkConf().set("spark.driver.allowMultipleContexts", "true")
     val sc = new SparkContext(sparkConfig)
 
-    val hrRDD :RDD[ShortSentence]  = InitRDD(sc)
+    val hrRDD: RDD[ShortSentence] = InitRDD(sc)
 
-     var cmd:String  = new CommMethod().WaitCommand();
-    while(cmd !="Q")
-    {
-       RDDCcount(cmd,hrRDD);
+    var cmd: String = new CommMethod().WaitCommand();
+    while (cmd != "Q") {
+      RDDCcount(cmd, hrRDD);
       cmd = new CommMethod().WaitCommand();
 
     }
@@ -54,8 +53,7 @@ object HotelReviewBiz {
   }
 
 
-
-  def InitRDD( sc: SparkContext):RDD[ShortSentence] = {
+  def InitRDD(sc: SparkContext): RDD[ShortSentence] = {
 
     val list: Seq[KeyWordEntity] = (new DB()).GetKeyWordsList();
     val keyWordList = list.map(l => (l.KeyWord))
@@ -65,7 +63,7 @@ object HotelReviewBiz {
 
     val filePath = "hdfs://hadoop:8020/spark/testData1"
 
-    val hrRDD:RDD[ShortSentence] = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0 )
+    val hrRDD: RDD[ShortSentence] = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0)
     hrRDD.cache()
 
     System.out.print(">>>>>>>>>>>>>>>>>hrRDD：" + hrRDD.count().toString)
@@ -85,7 +83,7 @@ object HotelReviewBiz {
 
     val filePath = "hdfs://hadoop:8020/spark/hotelReview/*/" //  List("hdfs://hadoop:8020/spark/hotelReview/0/138.txt","hdfs://hadoop:8020/spark/hotelReview/0/137.txt")
 
-    val hrRDD = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0 )
+    val hrRDD = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0)
     System.out.print(">>>>>>>>>>>>>>>>>hrRDD：" + hrRDD.count().toString)
 
 
@@ -159,7 +157,7 @@ object HotelReviewBiz {
 
     val sc = new SparkContext()
 
-    val soruceFilePath: String = "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt"// "hdfs://hadoop:8020/spark/hotelReview2/610.txt" // "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt"
+    val soruceFilePath: String = "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt" // "hdfs://hadoop:8020/spark/hotelReview2/610.txt" // "hdfs://hadoop:8020/spark/hotelReview2/stanfordWordTag.txt"
     /*    val targetFilePath: String = "hdfs://hadoop:8020/spark/test/"
         val targetFileName: String = "6.txt"*/
 
@@ -182,15 +180,14 @@ object HotelReviewBiz {
 
     //hrRDD.saveAsObjectFile("hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj.txt")
 
-    println(">>>>>>>>>>>>>>>>>>>startTime::" + startTime + "   startInitRDDTime:" +  startInitRDDTime + " CurDateTime：" +(new Date) )
+    println(">>>>>>>>>>>>>>>>>>>startTime::" + startTime + "   startInitRDDTime:" + startInitRDDTime + " CurDateTime：" + (new Date))
 
 
-    var cmd:String  = new CommMethod().WaitCommand();
-    while(cmd !="Q")
-    {
+    var cmd: String = new CommMethod().WaitCommand();
+    while (cmd != "Q") {
       val time1 = new Date()
       println(cmd + " Count :" + hr.GetHotelWordCountRDD(hrRDD, cmd.split(",").toList).count())
-      println(time1  )
+      println(time1)
       println(new Date())
       cmd = new CommMethod().WaitCommand();
     }
@@ -231,50 +228,30 @@ object HotelReviewBiz {
 
     val ssKey1 = ssl.flatMap(hr => for (item <- hr.RelList if (krList1.contains(item.Word1 + ":" + item.Word2) || krList1.contains(item.Word2 + ":" + item.Word1))) yield (hr, item))
 
-    val hrc = new HotelReview()
+    val hrc = new HRCommMethod()
     val relWordList = ssKey1.map(hi => {
       val hr = hi._1
       val item = hi._2
 
-        if (krList.contains(item.Word1 + ":" + item.Word2 + ":" + item.w2POS)) {
-          val ADV_NO =  hrc.GetADVAndNO(hr, item.Word1, item.Word2)
-          HotelKeyWordRelWord(hr.hotelid, item.Word1, item.Word2, item.w2POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
+      if (krList.contains(item.Word1 + ":" + item.Word2 + ":" + item.w2POS)) {
+        val ADV_NO = hrc.GetADVAndNO(hr, item.Word1, item.Word2)
+        HotelKeyWordRelWord(hr.hotelid, item.Word1, item.Word2, item.w2POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
 
-        }
-        else {
-          val ADV_NO = hrc.GetADVAndNO(hr, item.Word2, item.Word1)
-            HotelKeyWordRelWord(hr.hotelid, item.Word2, item.Word1, item.w1POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
-        
-        }
+      }
+      else {
+        val ADV_NO = hrc.GetADVAndNO(hr, item.Word2, item.Word1)
+        HotelKeyWordRelWord(hr.hotelid, item.Word2, item.Word1, item.w1POS, ADV_NO._1, ADV_NO._2, ADV_NO._3, ADV_NO._4)
+
+      }
     })
 
-
     relWordList.foreach(println)
-
 
     val dataList = (for (hr <- relWordList) yield hr).map(hr => {
       "(" + hr.hotelid + " ,'" + hr.KeyWord + "' ,'" + hr.RelWord + "','" + hr.RelWordPOS + "','" + hr.ADV + "','" + hr.ADVPOS + "','" + hr.NO + "','" + hr.NOPOS + "' )";
     }).toList
 
-    var index = 0
-    var values = ""
-    val batchLenght = 500
-    dataList.foreach(line => {
-      values += line + ","
-      index += 1
-      if (index > batchLenght) {
-        new DB().InsertHotelKeyWordRelWordBatch(values)
-        index = 0
-        values = ""
-      }
-    })
-
-    if (values.length > 0) {
-      new DB().InsertHotelKeyWordRelWordBatch(values)
-    }
-
-
-
+    new DB().InsertHotelKeyWordRelWordBatch(dataList)
     println()
 
   }
