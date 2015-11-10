@@ -29,12 +29,64 @@ object HotelReviewBiz {
 
   }
 
+  def autoRun(): Unit =
+  {
+    System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    System.setProperty("spark.kryo.registrator", "com.test.Comm.HotelReviewKryoRegistrator")
+
+    val sc = new SparkContext()
+
+    val hr = new HotelReview();
+
+  //  hr.CreateTestRDDObjectFile(sc)
+
+   val hrRDD = hr.InitRDD(sc)
+ // val hrRDD = hr.InitTestRDD(sc)
+
+    while(true)
+    {
+      val cmdList: Seq[SparkCmdEntity] =  new DB().GetTaskCmdList()
+
+      if( cmdList.length > 0) {
+
+        println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> New Command <<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        cmdList.foreach(c=>println(c.IDX + ":" + c.Type + ":" + c.Description + ":" + c.InputData))
+
+        val cmdTypeList = cmdList.map(c => c.Type).distinct
+
+        cmdTypeList.foreach(typeID => {
+          val typeCmdList = cmdList.filter(o => o.Type == typeID)
+          typeID match {
+            case 1 => hr.CalHotelKeyWordCount(hrRDD, typeCmdList)
+            case 2 => hr.CalHotelKeyWordRelWord(hrRDD, typeCmdList)
+            case 3 => hr.CalKeyWordRelWord(hrRDD, typeCmdList)
+            case 4 => hr.CalHotelGroupKeyWord(hrRDD,typeCmdList)
+            case 5 => hr.CalHotelGroupKeyWordWithWriting(hrRDD,typeCmdList)
+            case 6 => hr.CalHotelExpressWithWriting(hrRDD,typeCmdList)
+            case 7 => hr.CalHotelKeyWordCountsWithWriting(hrRDD,typeCmdList)
+          }
+
+        })
+      }
+
+      print(".")
+
+      Thread.sleep(5000)
+    }
+
+  }
+
+
   def main(args: Array[String]) {
-    run_GenKeyWordRelWord()
 
 
+     autoRun()
+   // run_GenKeyWordRelWord()
     return
 
+    val urlContent = new HRCommMethod().GetURLContent("http://192.168.1.114:808/API/Parse/test?sentence=%E5%AE%A4%E5%86%85%E6%81%92%E6%B8%A9%E6%B8%B8%E6%B3%B3%E6%B1%A0")
+    print(urlContent)
+    return ;
     test2();
     return
 
@@ -209,13 +261,21 @@ object HotelReviewBiz {
     }
   }
 
+  def GetRDDList:Array[ShortSentence]={
+   // (for (line <- Source.fromFile("D:\\LOG\\hotelReview\\398.txt").getLines() if line.length > 10) yield (line)).map(line => new HotelReview().transSS(line)).toArray
+    (for (line <- Source.fromFile("D:\\LOG\\hotelReview\\0\\138.txt").getLines() if line.length > 10) yield (line)).map(line => new HotelReview().transSS(line)).toArray
+  }
+
   def test2() = {
 
     val strSS: String = "1265963\t55\t241310\t(ROOT  (IP    (NP (NN 但) (NN 价格))    (VP      (ADVP (AD 不))      (VP (VC 是)        (VP          (ADVP (AD 很))          (VP (VV 贵)))))))\tnn(价格-2, 但-1)\tnsubj(贵-6, 价格-2)\tneg(贵-6, 不-3)\tcop(贵-6, 是-4)\tadvmod(贵-6, 很-5)\troot(ROOT-0, 贵-6)"
 
-    val ssl: Array[ShortSentence] = (for (line <- Source.fromFile("D:\\LOG\\hotelReview\\398.txt").getLines() if line.length > 10) yield (line)).map(line => new HotelReview().transSS(line)).toArray
 
+    val list1 = List("很","贵")
+    val hr =  new HotelReview().transSS(strSS)
+    val bHas = new  HRCommMethod().ContaintAllWordsWithSeq(hr,list1)
 
+    val ssl: Array[ShortSentence] =GetRDDList
     /*val list: Seq[KeyWordEntity] = new DB().GetKeyWordsList()
 
     val keyWordList = list.map(l=>(l.KeyWord))*/

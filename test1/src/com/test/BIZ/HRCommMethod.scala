@@ -2,11 +2,49 @@ package com.test.BIZ
 
 import com.test.Entity.ShortSentence
 
+import scala.io.Source
+
 
 /**
  * Created by Administrator on 2015/10/30.
  */
 class HRCommMethod {
+
+  def GetURLContent(url:String):String=
+  {
+    Source.fromURL(url, "utf-8").mkString
+  }
+  //按序列包含列表词
+  def ContaintAllWordsWithSeq(hr: ShortSentence, list: List[String]): Boolean = {
+        for( p <- list.sliding(2) )
+          {
+            if( ContaintParseWord(hr,p(0), p(1)) == false )
+              {
+                return false
+              }
+          }
+         true
+  }
+
+  def ContaintOneWords(hr: ShortSentence, firstWord: String): Boolean = {
+    for(item <- hr.RelList )
+    {
+      if( item.Word2==firstWord)
+        return true
+    }
+    false
+  }
+
+  def ContaintParseWord(hr: ShortSentence, firstWord: String, secWord: String ): Boolean = {
+    for(item <- hr.RelList )
+    {
+      if( (item.Word2==firstWord && item.Word1 == secWord) || (item.Word1==firstWord && item.Word2 == secWord) ) {
+        return true
+      }
+    }
+    false
+  }
+
 
   val NOList = List("不", "没", "否", "不太", "没有", "除了")
 

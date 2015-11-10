@@ -53,6 +53,13 @@ public class DB {
         }
     }
 
+    public void ExecSQL(String sql) {
+        DBHelper conn = new DBHelper();
+        conn.OpenConnection(ConnectionString114);
+        System.out.println(sql);
+        conn.ExecuteUpdate(sql);
+    }
+
     public  List<KeyWordEntity>  GetKeyWordsList() throws SQLException {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);
@@ -102,6 +109,28 @@ public class DB {
             System.out.println(sql + values);
             conn.ExecuteUpdate(sql + values);
         }
+    }
+    public void InsertHotelGroupKeyWordBatch(int TaskID, List<String>  valueList  )
+    {
+        String delSQL = "delete SparkCmdResult WHERE taskID = " + String.valueOf(TaskID);
+        ExecSQL(delSQL);
+
+        String sql = "INSERT INTO [dbo].[SparkCmdResult]([TaskID],[HotelID] ,[Total]) VALUES";
+        BatchInsert(valueList, sql);
+    }
+
+    public void InsertSparkCmdResultWithWritingBatch(int TaskID, List<String>  valueList  )
+    {
+        String delSQL = "delete SparkCmdResultWithWriting WHERE taskID = " + String.valueOf(TaskID);
+        ExecSQL(delSQL);
+
+        String sql = "INSERT INTO [dbo].[SparkCmdResultWithWriting]([TaskID],[HotelID] ,[Writing]) VALUES";
+        BatchInsert(valueList, sql);
+    }
+    public void InsertHotelKeyWordCountBatchWithWriting(List<String>  valueList  )
+    {
+        String sql = "INSERT INTO [dbo].[HotelKeyWordCountWithWriting] ([hotelid] ,[KeyWord] ,[NO] ,[Writing],[TaskID]) VALUES";
+        BatchInsert(valueList,sql);
     }
 
     public void InsertHotelKeyWordCountBatch(List<String>  valueList  )

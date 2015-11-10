@@ -11,3 +11,5 @@ case class ShortSentence(idx:Long, hotelid:Int, writing:Int,RelList:List[RelItem
 case class HotelKeyWordRelWord(hotelid:Int, KeyWord:String, RelWord:String, RelWordPOS:String, ADV:String, ADVPOS:String, NO:String , NOPOS:String)
 
 case class HotelWordCount(hotelid:Int, KeyWord:String, NO:String, Total:Int)
+
+case class HotelWordCountWithWriting(hotelid:Int, KeyWord:String, NO:String, Writing:Int)

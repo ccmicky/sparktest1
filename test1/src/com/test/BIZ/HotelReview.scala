@@ -19,6 +19,73 @@ import scala.collection.JavaConversions._
  * Created by Administrator on 2015/10/22.
  */
 class HotelReview {
+  def CalHotelKeyWordCountsWithWriting(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+    val StartTime = new Date
+    val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
+
+    val hkcList: RDD[HotelWordCountWithWriting] =GetHotelWordCountWithWriting(hrRDD,list)
+    InsertHotelKeyWordCountDataWithWriting(hkcList,typeCmdList)
+
+    UpdateSparCmdEntity(typeCmdList, StartTime)
+  }
+
+  def CalHotelExpressWithWriting(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) ={
+
+  }
+
+
+  val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
+  val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
+
+  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
+  val savedTestObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_test_obj.txt"
+
+
+
+  def GetHotelGroupKeyWordWithWritingRDD(hrRDD: RDD[ShortSentence], list: List[String]): RDD[(Int, Int)] = {
+     hrRDD.filter(hr => new HRCommMethod().ContaintAllWordsWithSeq(hr, list)).map(hr => (hr.hotelid,hr.writing))
+  }
+
+   def InsertSparkCmdResultWithWritingData(TaskID:Int, dataList:  RDD[(Int, Int)]) = {
+     val valueList = dataList.collect().map(line => {
+       "(" + TaskID + "," + line._1 + " ," + line._2 + " )"
+     })
+
+     new DB().InsertSparkCmdResultWithWritingBatch(TaskID, valueList.toList)
+   }
+
+  def CalHotelGroupKeyWordWithWriting(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+    typeCmdList.foreach(cmd=>{
+      val StartTime = new Date
+      val list = cmd.InputData.split(",").toList
+      val krList =  GetHotelGroupKeyWordWithWritingRDD(hrRDD,list)
+      InsertSparkCmdResultWithWritingData(cmd.IDX, krList)
+      UpdateSparCmdEntity(Seq(cmd), StartTime)
+    })
+  }
+
+  def GetHotelGroupKeyWordRDD(hrRDD: RDD[ShortSentence], list: List[String]): RDD[(Int, Int)] = {
+    hrRDD.filter(hr => new HRCommMethod().ContaintAllWordsWithSeq(hr, list)).map(hr => (hr.hotelid, 1)).reduceByKey(_ + _)
+  }
+
+  def InsertHotelGroupKeyWordData(TaskID:Int, dataList:  RDD[(Int, Int)]) = {
+    val valueList = dataList.collect().map(line => {
+      "(" + TaskID + "," + line._1 + " ," + line._2 + " )"
+    })
+
+    new DB().InsertHotelGroupKeyWordBatch(TaskID, valueList.toList)
+  }
+
+  def CalHotelGroupKeyWord(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+    typeCmdList.foreach(cmd=>{
+      val StartTime = new Date
+      val list = cmd.InputData.split(",").toList
+      val krList =  GetHotelGroupKeyWordRDD(hrRDD,list)
+      InsertHotelGroupKeyWordData(cmd.IDX, krList)
+      UpdateSparCmdEntity(Seq(cmd), StartTime)
+    })
+  }
+
 
   def CalKeyWordRelWord(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity])=
   {
@@ -32,8 +99,8 @@ class HotelReview {
 
   def UpdateSparCmdEntity(typeCmdList: Seq[SparkCmdEntity], StartTime: Date) = {
     typeCmdList.foreach(c=> {
-      c.StartTime = new CommMethod().FormatDate(StartTime)
-      c.EndTime = new CommMethod().FormatDate(new Date())
+      c.StartTime =  CommMethod.DateToStr(StartTime)
+      c.EndTime =  CommMethod.DateToStr(new Date())
       c.State = 1
     }
     )
@@ -62,18 +129,18 @@ class HotelReview {
     val StartTime = new Date
     val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
 
-    val hkcList: RDD[(String, Int)] =GetHotelWordCount(hrRDD,list)
+    val hkcList: RDD[(String, Int)] =GetHotelWordCountRDD(hrRDD,list)
     InsertHotelKeyWordCountData(hkcList)
 
     UpdateSparCmdEntity(typeCmdList, StartTime)
   }
 
-
-  val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
-  val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
-
-  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
-
+  def InitTestRDD(sc: SparkContext): RDD[ShortSentence] = {
+    val hrRDD: RDD[ShortSentence] = sc.objectFile(savedTestObjectFileName)
+    //hrRDD.persist( StorageLevel(false,true,false,true,1))
+    hrRDD.persist(StorageLevel.MEMORY_ONLY)
+    hrRDD
+  }
 
   def InitRDD(sc: SparkContext): RDD[ShortSentence] = {
     val hrRDD: RDD[ShortSentence] = sc.objectFile(savedObjectFileName)
@@ -114,18 +181,16 @@ class HotelReview {
 
 
   //计算某些词在酒店中的命中数量
-  def GetHotelWordCount(hrRDD: RDD[ShortSentence], keyWordList: List[String]): RDD[(String, Int)] = {
+  def GetHotelWordCountWithWriting(hrRDD: RDD[ShortSentence], keyWordList: List[String]): RDD[HotelWordCountWithWriting] = {
 
     val ssKey1 = hrRDD.flatMap(hr => for (item <- hr.RelList if (keyWordList.contains(item.Word2))) yield (hr, item))
 
-    val countWordList = ssKey1.map(hi => {
+    ssKey1.map(hi => {
       val hr = hi._1
       val item = hi._2
       val NO = new HRCommMethod().GetNO(hr, item.Word1)
-      HotelWordCount(hr.hotelid, item.Word2, NO, 1)
+      HotelWordCountWithWriting(hr.hotelid, item.Word2, NO, hr.writing)
     })
-
-    countWordList.map(item => (item.hotelid + ":" + item.KeyWord + ":" + item.NO, 1)).reduceByKey(_ + _)
   }
 
 
@@ -290,6 +355,31 @@ class HotelReview {
     })
 
     new DB().InsertHotelKeyWordCountBatch(valueList.toList)
+  }
+
+  def CheckTaskIDX(keyWord: String, typeCmdList: Seq[SparkCmdEntity]):Int = {
+    typeCmdList.foreach(c => {
+      if (c.InputData.split(";").contains(keyWord))
+        return c.IDX
+    })
+    0
+  }
+
+  def InsertHotelKeyWordCountDataWithWriting(dataList: RDD[HotelWordCountWithWriting], typeCmdList: Seq[SparkCmdEntity]) = {
+    val valueList = dataList.collect().map(line => {
+      val TaskID = CheckTaskIDX(line.KeyWord,typeCmdList)
+      "(" + line.hotelid + " ,'" + line.KeyWord + "' ,'" + line.NO + "','" +  line.Writing + "','" +  TaskID + "' )"
+    })
+
+    new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
+  }
+
+  def CreateTestRDDObjectFile(sc:SparkContext) {
+    val filePath ="hdfs://hadoop:8020/spark/hotelReview/138.txt"
+
+    val hrRDD = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0)
+
+    hrRDD.saveAsObjectFile(savedTestObjectFileName)
   }
 
 }
