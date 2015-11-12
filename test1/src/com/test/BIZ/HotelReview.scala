@@ -37,7 +37,7 @@ class HotelReview {
   val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
   val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
 
-  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
+  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt" // "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
   val savedTestObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_test_obj.txt"
 
 
@@ -129,7 +129,7 @@ class HotelReview {
     val StartTime = new Date
     val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
 
-    val hkcList: RDD[(String, Int)] =GetHotelWordCountRDD(hrRDD,list)
+    val hkcList: RDD[(String, Int)] = GetHotelWordCountRDD(hrRDD,list)
     InsertHotelKeyWordCountData(hkcList)
 
     UpdateSparCmdEntity(typeCmdList, StartTime)
@@ -176,9 +176,7 @@ class HotelReview {
     val relWordList = relWordList1.union(relWordList2)
 
     relWordList.map(s => (s.hotelid + ":" + s.KeyWord + ":" + s.RelWord + ":" + s.RelWordPOS + ":" + s.ADV + ":" + s.ADVPOS + ":" + s.NO + ":" + s.NOPOS, 1)).reduceByKey(_ + _)
-
   }
-
 
   //计算某些词在酒店中的命中数量
   def GetHotelWordCountWithWriting(hrRDD: RDD[ShortSentence], keyWordList: List[String]): RDD[HotelWordCountWithWriting] = {
@@ -192,10 +190,6 @@ class HotelReview {
       HotelWordCountWithWriting(hr.hotelid, item.Word2, NO, hr.writing)
     })
   }
-
-
-
-
 
   //获取词的出现次数
   def GetWordCountRDD(hrRDD: RDD[ShortSentence], wordsList: List[String]): RDD[(String, Int)] = {

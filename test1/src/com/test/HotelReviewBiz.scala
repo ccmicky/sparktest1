@@ -40,8 +40,8 @@ object HotelReviewBiz {
 
   //  hr.CreateTestRDDObjectFile(sc)
 
-   val hrRDD = hr.InitRDD(sc)
- // val hrRDD = hr.InitTestRDD(sc)
+   //val hrRDD = hr.InitRDD(sc)
+  val hrRDD = hr.InitTestRDD(sc)
 
     while(true)
     {
@@ -64,6 +64,7 @@ object HotelReviewBiz {
             case 5 => hr.CalHotelGroupKeyWordWithWriting(hrRDD,typeCmdList)
             case 6 => hr.CalHotelExpressWithWriting(hrRDD,typeCmdList)
             case 7 => hr.CalHotelKeyWordCountsWithWriting(hrRDD,typeCmdList)
+            case _ => println("I don't know how to deal the type " + typeID +", can you tell me?")
           }
 
         })
@@ -76,10 +77,20 @@ object HotelReviewBiz {
 
   }
 
+  def  gen2013: Unit ={
+    val sc = new SparkContext()
+
+    val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
+    val saved2013ObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt"
+    val writing2013:String = "hdfs://hadoop:8020/spark/hotelReview/writing2013.txt"
+    val hrRDD: RDD[ShortSentence] = sc.objectFile(savedObjectFileName)
+
+    val wRDD = sc.textFile(writing2013).map(w=>(w,0))
+
+     hrRDD.keyBy(_.writing.toString).join(wRDD).map(_._2._1).saveAsObjectFile(saved2013ObjectFileName)
+  }
 
   def main(args: Array[String]) {
-
-
      autoRun()
    // run_GenKeyWordRelWord()
     return
