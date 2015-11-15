@@ -4,7 +4,7 @@ import java.io.{PushbackInputStream, File}
 import java.net.URI
 import java.util
 import java.util.Date
-import com.test.BIZ.{HRCommMethod, HotelReview}
+import com.test.BIZ._
 import com.test.Comm.FileMethod
 import com.test.Entity._
 import org.apache.hadoop.conf.Configuration
@@ -90,7 +90,47 @@ object HotelReviewBiz {
      hrRDD.keyBy(_.writing.toString).join(wRDD).map(_._2._1).saveAsObjectFile(saved2013ObjectFileName)
   }
 
+  def testExpress(): Unit ={
+
+    val str ="【good】"
+    val exp =  "(\"酒店\"->\"位置\")" //"- \"6\" +(\"干嘛\" + \"1\")**(\"2\" - \"3\") / (\"4\" - \"5\") + (!\"7\") + (\"儿童,室内\"->\"泳池\") "
+    val e2 = Arith.parse(exp)
+
+
+    println(exp)
+    println(e2)
+   val ss:ShortSentence =  ShortSentence(1,2,3,List[RelItem]( RelItem( "","位置","",1,"酒店","",2) ) )
+
+    println(NLPArith.evaluate(e2,ss))
+
+
+    val list:List[String] = List("现在","可以","","")
+   // val exp = new LogicalExpression(list).sparse("(\"现在\"->\"可以\")||(\"没有\"->\"就好\")")
+ //   print(exp.successful)
+
+    val sc = new SparkContext()
+
+    val hr = new HotelReview();
+
+    //  hr.CreateTestRDDObjectFile(sc)
+
+    //val hrRDD = hr.InitRDD(sc)
+    val hrRDD = hr.InitTestRDD(sc)
+
+ //   hrRDD.collect().foreach(f=>println(f))
+
+    val fRDD = hrRDD.filter(h=> NLPArith.evaluate(e2,h ))
+
+    println(fRDD.count())
+
+    fRDD.collect().foreach(f=>println(f))
+
+  }
+
   def main(args: Array[String]) {
+    testExpress();
+    return ;
+
      autoRun()
    // run_GenKeyWordRelWord()
     return
