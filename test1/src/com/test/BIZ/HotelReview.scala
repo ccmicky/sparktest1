@@ -25,7 +25,9 @@ class HotelReview {
 
       val StartTime = new Date
       val e2 = Arith.parse(c.InputData)
-      val KeyWordList:Array[String] = c.InputData.split("+-*/->&|()".toCharArray)
+      val KeyWordList:Array[String] = c.InputData.split("+-*/->&|()\"".toCharArray)
+
+      println(KeyWordList)
 
       val hkcList = hrRDD.filter(h=> NLPArith.evaluate(e2,h )).map(hi => {
        val NO =  new HRCommMethod().GetNOWithKeyWordList(hi,KeyWordList)
