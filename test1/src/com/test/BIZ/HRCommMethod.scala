@@ -66,6 +66,24 @@ class HRCommMethod {
     NO
   }
 
+  //获取否定词
+  def GetNOWithKeyWordList(hr: ShortSentence, KeyWordList: Array[String]): String = {
+    var NO: String = ""
+    for (item <- hr.RelList) {
+      if (KeyWordList.contains(item.Word2)) {
+        if (NOList.contains(item.Word1)) {
+          NO = item.Word1
+        }
+      }
+      else if (KeyWordList.contains(item.Word1)) {
+        if (NOList.contains(item.Word2)) {
+          NO = item.Word2
+        }
+      }
+    }
+    NO
+  }
+
   def GetADVAndNO(hr: ShortSentence, KeyWord: String, RelWord: String): (String, String, String, String) = {
     var ADV: String = ""
     var NO: String = ""

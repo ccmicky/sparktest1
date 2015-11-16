@@ -53,6 +53,17 @@ public class DB {
         }
     }
 
+    public void UpdateOneTaskCmd(SparkCmdEntity cmd) {
+
+        DBHelper conn = new DBHelper();
+        conn.OpenConnection(ConnectionString114);
+
+        String sql = "Update SparkCmd  Set State=" + cmd.State + " , StartTime = '" + cmd.StartTime + "' , EndTime='" + cmd.EndTime + "' WHERE　IDX=" + cmd.IDX;
+
+        System.out.println(sql);
+        conn.ExecuteUpdate(sql);
+    }
+
     public void ExecSQL(String sql) {
         DBHelper conn = new DBHelper();
         conn.OpenConnection(ConnectionString114);

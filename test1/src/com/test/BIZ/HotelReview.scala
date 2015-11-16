@@ -19,6 +19,26 @@ import scala.collection.JavaConversions._
  * Created by Administrator on 2015/10/22.
  */
 class HotelReview {
+  def CalHotelKeyWordCountsWithExp(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
+
+    typeCmdList.foreach(c=>{
+
+      val StartTime = new Date
+      val e2 = Arith.parse(c.InputData)
+      val KeyWordList:Array[String] = c.InputData.split("+-*/->&|()".toCharArray)
+
+      val hkcList = hrRDD.filter(h=> NLPArith.evaluate(e2,h )).map(hi => {
+       val NO =  new HRCommMethod().GetNOWithKeyWordList(hi,KeyWordList)
+        HotelWordCountWithWriting(hi.hotelid, "", NO, hi.writing)
+      })
+
+      InsertHotelKeyWordCountDataByRuleWithWriting(hkcList,c)
+
+      UpdateOneSparCmdEntity(c, StartTime)
+    })
+
+  }
+
   def CalHotelKeyWordCountsWithWriting(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
     val StartTime = new Date
     val list = typeCmdList.flatMap(c=>  c.InputData.split(";")).toList
@@ -27,10 +47,6 @@ class HotelReview {
     InsertHotelKeyWordCountDataWithWriting(hkcList,typeCmdList)
 
     UpdateSparCmdEntity(typeCmdList, StartTime)
-  }
-
-  def CalHotelExpressWithWriting(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) ={
-
   }
 
 
@@ -107,6 +123,14 @@ class HotelReview {
     new DB().UpdateTaskCmd(typeCmdList)
   }
 
+  def UpdateOneSparCmdEntity(typeCmd: SparkCmdEntity, StartTime: Date) = {
+    typeCmd.StartTime =  CommMethod.DateToStr(StartTime)
+    typeCmd.EndTime =  CommMethod.DateToStr(new Date())
+    typeCmd.State = 1
+
+    new DB().UpdateOneTaskCmd(typeCmd)
+  }
+
   def CalHotelKeyWordRelWord(hrRDD: RDD[ShortSentence], typeCmdList: Seq[SparkCmdEntity]) = {
 
     val StartTime = new Date
@@ -177,6 +201,7 @@ class HotelReview {
 
     relWordList.map(s => (s.hotelid + ":" + s.KeyWord + ":" + s.RelWord + ":" + s.RelWordPOS + ":" + s.ADV + ":" + s.ADVPOS + ":" + s.NO + ":" + s.NOPOS, 1)).reduceByKey(_ + _)
   }
+
 
   //计算某些词在酒店中的命中数量
   def GetHotelWordCountWithWriting(hrRDD: RDD[ShortSentence], keyWordList: List[String]): RDD[HotelWordCountWithWriting] = {
@@ -357,6 +382,14 @@ class HotelReview {
         return c.IDX
     })
     0
+  }
+
+  def InsertHotelKeyWordCountDataByRuleWithWriting(dataList: RDD[HotelWordCountWithWriting], typeCmd: SparkCmdEntity) = {
+    val valueList = dataList.collect().map(line => {
+      "(" + line.hotelid + " ,'" + line.KeyWord + "' ,'" + line.NO + "','" +  line.Writing + "','" +  typeCmd.IDX + "' )"
+    })
+
+    new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
   }
 
   def InsertHotelKeyWordCountDataWithWriting(dataList: RDD[HotelWordCountWithWriting], typeCmdList: Seq[SparkCmdEntity]) = {

@@ -40,8 +40,8 @@ object HotelReviewBiz {
 
   //  hr.CreateTestRDDObjectFile(sc)
 
-   //val hrRDD = hr.InitRDD(sc)
-  val hrRDD = hr.InitTestRDD(sc)
+   val hrRDD = hr.InitRDD(sc)
+  //val hrRDD = hr.InitTestRDD(sc)
 
     while(true)
     {
@@ -62,7 +62,7 @@ object HotelReviewBiz {
             case 3 => hr.CalKeyWordRelWord(hrRDD, typeCmdList)
             case 4 => hr.CalHotelGroupKeyWord(hrRDD,typeCmdList)
             case 5 => hr.CalHotelGroupKeyWordWithWriting(hrRDD,typeCmdList)
-            case 6 => hr.CalHotelExpressWithWriting(hrRDD,typeCmdList)
+            case 6 => hr.CalHotelKeyWordCountsWithExp(hrRDD,typeCmdList)
             case 7 => hr.CalHotelKeyWordCountsWithWriting(hrRDD,typeCmdList)
             case _ => println("I don't know how to deal the type " + typeID +", can you tell me?")
           }
@@ -93,16 +93,17 @@ object HotelReviewBiz {
   def testExpress(): Unit ={
 
     val str ="【good】"
-    val exp =  "(\"酒店\"->\"位置\")" //"- \"6\" +(\"干嘛\" + \"1\")**(\"2\" - \"3\") / (\"4\" - \"5\") + (!\"7\") + (\"儿童,室内\"->\"泳池\") "
+    val exp =  "(\"室内\"->\"泳池\")&&(\"儿童\"->\"泳池\")" //"- \"6\" +(\"干嘛\" + \"1\")**(\"2\" - \"3\") / (\"4\" - \"5\") + (!\"7\") + (\"儿童,室内\"->\"泳池\") "
     val e2 = Arith.parse(exp)
 
 
     println(exp)
     println(e2)
-   val ss:ShortSentence =  ShortSentence(1,2,3,List[RelItem]( RelItem( "","位置","",1,"酒店","",2) ) )
+   val ss:ShortSentence =  ShortSentence(1,2,3,List[RelItem]( RelItem( "","泳池","",1,"室内","",2),RelItem( "","泳池","",1,"儿童","",2) ) )
 
     println(NLPArith.evaluate(e2,ss))
 
+    return
 
     val list:List[String] = List("现在","可以","","")
    // val exp = new LogicalExpression(list).sparse("(\"现在\"->\"可以\")||(\"没有\"->\"就好\")")
@@ -128,8 +129,8 @@ object HotelReviewBiz {
   }
 
   def main(args: Array[String]) {
-    testExpress();
-    return ;
+  //  testExpress();
+    //return ;
 
      autoRun()
    // run_GenKeyWordRelWord()
