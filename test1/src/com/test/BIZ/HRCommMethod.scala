@@ -10,6 +10,10 @@ import scala.io.Source
  */
 class HRCommMethod {
 
+  def NotifySparkCmdTaskFinished(taskID:Int): Unit ={
+    scala.io.Source.fromURL("http://ca.shanglv.net.cn:800/API/Parse/SparkCmdTaskFinished?TaskID"+taskID,"utf-8")
+  }
+
   def GetURLContent(url:String):String=
   {
     Source.fromURL(url, "utf-8").mkString

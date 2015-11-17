@@ -138,7 +138,14 @@ public class DB {
         String sql = "INSERT INTO [dbo].[SparkCmdResultWithWriting]([TaskID],[HotelID] ,[Writing]) VALUES";
         BatchInsert(valueList, sql);
     }
-    public void InsertHotelKeyWordCountBatchWithWriting(List<String>  valueList  )
+
+    public void DelHotelKeyWordCountByTaskID(int TaskID )
+    {
+        String delSQL = "delete HotelKeyWordCountWithWriting WHERE taskID = " + String.valueOf(TaskID);
+        ExecSQL(delSQL);
+    }
+
+    public void InsertHotelKeyWordCountBatchWithWriting(List<String>  valueList)
     {
         String sql = "INSERT INTO [dbo].[HotelKeyWordCountWithWriting] ([hotelid] ,[KeyWord] ,[NO] ,[Writing],[TaskID]) VALUES";
         BatchInsert(valueList,sql);

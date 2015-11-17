@@ -24,12 +24,10 @@ class HotelReview {
     typeCmdList.foreach(c=>{
 
       val StartTime = new Date
-      val e2 = Arith.parse(c.InputData)
+      val expTree = Arith.parse(c.InputData)
       val KeyWordList:Array[String] = c.InputData.split("+-*/->&|()\"".toCharArray)
 
-      println(KeyWordList)
-
-      val hkcList = hrRDD.filter(h=> NLPArith.evaluate(e2,h )).map(hi => {
+      val hkcList = hrRDD.filter(h=> NLPArith.evaluate(expTree,h )).map(hi => {
        val NO =  new HRCommMethod().GetNOWithKeyWordList(hi,KeyWordList)
         HotelWordCountWithWriting(hi.hotelid, "", NO, hi.writing)
       })
@@ -55,9 +53,8 @@ class HotelReview {
   val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
   val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
 
-  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt" // "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
+  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt" // "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
   val savedTestObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_test_obj.txt"
-
 
 
   def GetHotelGroupKeyWordWithWritingRDD(hrRDD: RDD[ShortSentence], list: List[String]): RDD[(Int, Int)] = {
@@ -123,6 +120,9 @@ class HotelReview {
     }
     )
     new DB().UpdateTaskCmd(typeCmdList)
+
+    typeCmdList.foreach(c=> new HRCommMethod().NotifySparkCmdTaskFinished(c.IDX))
+
   }
 
   def UpdateOneSparCmdEntity(typeCmd: SparkCmdEntity, StartTime: Date) = {
@@ -253,9 +253,6 @@ class HotelReview {
     ssKey.map(s => (s.Word + ":" + s.RelWord + ":" + s.RelWordPOS, 1)).reduceByKey(_ + _)
   }
 
-
-
-
   def parseWordItem(str: String): List[WordItem] = {
     try {
       var list = (for (wordreg(pos, word) <- wordreg.findAllIn(str)) yield (pos, word)).map(item => WordItem(item._2, item._1)).toList
@@ -360,8 +357,7 @@ class HotelReview {
 
   def InsertHotelRelWordData(dataList: RDD[(String, Int)]) = {
     val valueList = dataList.collect().map(line => {
-      println(line)
-      val datas = line._1.split(":",-1)
+       val datas = line._1.split(":",-1)
       "(" + datas(0) + " ,'" + datas(1) + "' ,'" + datas(2) + "','" + datas(3) + "','" + datas(4) + "','" + datas(5) + "','" + datas(6) + "','" + line._2 + "' )"
     })
 
@@ -370,7 +366,6 @@ class HotelReview {
 
   def InsertHotelKeyWordCountData(dataList: RDD[(String, Int)]) = {
     val valueList = dataList.collect().map(line => {
-      println(line)
       val datas = line._1.split(":",-1)
       "(" + datas(0) + " ,'" + datas(1) + "' ,'" + datas(2) + "','" +  line._2 + "' )"
     })
@@ -390,7 +385,7 @@ class HotelReview {
     val valueList = dataList.collect().map(line => {
       "(" + line.hotelid + " ,'" + line.KeyWord + "' ,'" + line.NO + "','" +  line.Writing + "','" +  typeCmd.IDX + "' )"
     })
-
+    new DB().DelHotelKeyWordCountByTaskID(typeCmd.IDX)
     new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
   }
 
@@ -399,6 +394,7 @@ class HotelReview {
       val TaskID = CheckTaskIDX(line.KeyWord,typeCmdList)
       "(" + line.hotelid + " ,'" + line.KeyWord + "' ,'" + line.NO + "','" +  line.Writing + "','" +  TaskID + "' )"
     })
+    typeCmdList.foreach(c=> new DB().DelHotelKeyWordCountByTaskID(c.IDX))
 
     new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
   }

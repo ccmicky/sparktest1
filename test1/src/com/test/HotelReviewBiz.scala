@@ -80,9 +80,9 @@ object HotelReviewBiz {
   def  gen2013: Unit ={
     val sc = new SparkContext()
 
-    val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
-    val saved2013ObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt"
-    val writing2013:String = "hdfs://hadoop:8020/spark/hotelReview/writing2013.txt"
+    val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt"
+    val saved2013ObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt"
+    val writing2013:String = "hdfs://hadoop:8020/spark/hotelReview/hr2013.rpt"
     val hrRDD: RDD[ShortSentence] = sc.objectFile(savedObjectFileName)
 
     val wRDD = sc.textFile(writing2013).map(w=>(w,0))
@@ -93,12 +93,13 @@ object HotelReviewBiz {
   def testExpress(): Unit ={
 
     val str ="【good】"
-    val exp =  "(\"室内\"->\"泳池\")&&(\"儿童\"->\"泳池\")" //"- \"6\" +(\"干嘛\" + \"1\")**(\"2\" - \"3\") / (\"4\" - \"5\") + (!\"7\") + (\"儿童,室内\"->\"泳池\") "
+    val exp =  "(\"设计->\"感\")||(\"设计\"->\"酒店\")" //"- \"6\" +(\"干嘛\" + \"1\")**(\"2\" - \"3\") / (\"4\" - \"5\") + (!\"7\") + (\"儿童,室内\"->\"泳池\") "
     val e2 = Arith.parse(exp)
 
 
     println(exp)
     println(e2)
+    return
    val ss:ShortSentence =  ShortSentence(1,2,3,List[RelItem]( RelItem( "","泳池","",1,"室内","",2),RelItem( "","泳池","",1,"儿童","",2) ) )
 
     println(NLPArith.evaluate(e2,ss))
@@ -129,7 +130,9 @@ object HotelReviewBiz {
   }
 
   def main(args: Array[String]) {
-  //  testExpress();
+
+
+   // testExpress();
     //return ;
 
      autoRun()
