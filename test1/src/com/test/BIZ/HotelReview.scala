@@ -53,7 +53,7 @@ class HotelReview {
   val regex = """([a-z]+)\((.*)-([0-9]+),(.*)-([0-9]+)\)""".r
   val wordreg = "([A-Z]*) ([\\*+、：’…_\\-a-zA-Z0-9\u4e00-\u9fa5\uFF00-\uFFFF]+)".r // "([A-Z]*) ([\u4e00-\u9fa5]+)".r
 
-  val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt" // "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
+  val savedObjectFileName: String ="hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj2.txt"// "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt" // "hdfs://hadoop:8020/spark/hotelReview/SSRDD_obj1.txt"
   val savedTestObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_test_obj.txt"
 
 
