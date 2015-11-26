@@ -66,7 +66,7 @@ object MainTest {
         val values = sc.textFile(args(0) + "/" + Temp+"/not").map(p => p.trim)
         val bcvalues = sc.broadcast(values.collect)
         println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-
+/*
         val FalseHotels = filtedtagedCollect.filter { point =>
           BFSearch.isTagedbyKey(bckeys, bcvalues, point._2._1)
         }
@@ -99,7 +99,7 @@ object MainTest {
           iterates += inserIntoDatebase(points._2._2._2._1,points._2._2._2._2, points._2._2._2._3, points._1._3,args(2).split('/')(1)+args(3).split('/')(1))
         }
         println("insertToatlitemNums:"+iterates.toString)
-
+*/
       }
     else
       {
