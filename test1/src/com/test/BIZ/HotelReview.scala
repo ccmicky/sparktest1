@@ -5,7 +5,7 @@ import java.util
 import java.util.Date
 
 import com.test.Comm.FileMethod
-import com.test.{CommMethod, DB}
+import com.test.{BFSearch, LogicalExpression1, CommMethod, DB}
 import com.test.Entity._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileUtil, Path, FileSystem}
@@ -389,6 +389,20 @@ class HotelReview {
     new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
   }
 
+  ///////////////////////////////////////////////////////////
+  //author: ccmicky
+  //parameter: @dataList the result after filtting
+  //          @CmdIDX the number of command Type
+  //usage: 将结果批量插入数据库
+  ///////////////////////////////////////////////////////////
+  def InsertHotelKeyWordCountDataByRuleWithWriting(dataList: RDD[HotelWordCountWithWriting], CmdIDX: Int) = {
+    val valueList = dataList.collect().map(line => {
+      "(" + line.hotelid + " ,'" + line.KeyWord + "' ,'" + line.NO + "','" +  line.Writing + "','" +  CmdIDX + "' )"
+    })
+
+    new DB().InsertHotelKeyWordCountBatchWithWriting(valueList.toList)
+  }
+
   def InsertHotelKeyWordCountDataWithWriting(dataList: RDD[HotelWordCountWithWriting], typeCmdList: Seq[SparkCmdEntity]) = {
     val valueList = dataList.collect().map(line => {
       val TaskID = CheckTaskIDX(line.KeyWord,typeCmdList)
@@ -405,6 +419,86 @@ class HotelReview {
     val hrRDD = sc.textFile(filePath).map(s => new HotelReview().transSS(s)).filter(s => s.idx > 0)
 
     hrRDD.saveAsObjectFile(savedTestObjectFileName)
+  }
+  ///////////////////////////////////////////////////////////
+  //author: ccmicky
+  //parameter: @hrRDD the initial data of stanfordparser result
+  //           @tempRDD the initial of the template of the keywords
+  //           @typeCmdList the queue of the input cmds
+  //usage: 根据输入的命令类型解析表达式对酒店分类
+  ///////////////////////////////////////////////////////////
+  def ClassifyHotelTypeWithWriting(hrRDD: RDD[ShortSentence], tempRDD: List[Map[String,String]],typeCmdList: Seq[SparkCmdEntity]) = {
+    val StartTime = new Date
+    val cmdlist = typeCmdList.map(c=>  (c.InputData,c.IDX)).toList
+    for (cmd <- cmdlist)
+    {
+      inputFormatCmd(cmd._1,cmd._2,hrRDD,tempRDD)
+    }
+    UpdateSparCmdEntity(typeCmdList, StartTime)
+
+  }
+
+  ///////////////////////////////////////////////////////////
+  //author: ccmicky
+  //parameter: @hrRDD the initial data of stanfordparser result
+  //           @tempRDD the initial of the template of the keywords
+  //           @cmd the string of the cmd
+  //usage:根据有格式输入命令进行表达式解析，对酒店点评进行过滤
+  ///////////////////////////////////////////////////////////
+  def inputFormatCmd(cmd:String,cmdidx:Int, hrRDD: RDD[ShortSentence], tempRDD: List[Map[String,String]])= {
+    println("testing parser")
+
+    //val variables = Map("a" -> true, "b" -> false, "c" -> true)
+    val variableParser = LogicalExpression1.sparse(hrRDD,tempRDD) _
+    val patten = "[\\u4e00-\\u9fa5_A-Za-z0-9]+".r
+    var str = cmd
+    var goal = ""
+    str = str.replaceAll(" ","")
+    for (matchString <- patten.findAllIn(str))
+    {
+      str = str.replaceAll(matchString, "\""+matchString+"\"")
+      goal = matchString
+    }
+    //println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"+goal)
+
+    while(str.indexOf("\"\"")>=0)
+    {
+      str = str.replace("\"\"","\"")
+    }
+
+    print(str)
+    //variableParser("!(\"aaa\"->\"再见\") && !(\"aaa\"->\"ccc\")")
+    val filterhrRDD = variableParser(str)
+
+    //val nottemplatFilePath: String ="hdfs://hadoop:8020/spark/ccmicky/Temp/not"
+    val not =  tempRDD.filter(p=>p.keys.head=="not")
+    var bcnot = List("没有","没","无").toArray
+    if(not.length>0)
+    {
+      bcnot= not.map(p=>p.values.head).toArray
+      bcnot.foreach(p=>println("not"+p))
+    }
+
+    val goaltemp =  tempRDD.filter(p=> p.keys.head==goal)
+    var bcgoal = List(goal).toArray
+    if(goaltemp.length>0)
+    {
+      bcgoal= goaltemp.map(p=>p.values.head).toArray
+      bcgoal.foreach(p=>println(goal+p))
+
+    }
+
+    //val bcnot = List("没有").toArray
+
+    val formatedRDD = filterhrRDD.map{p=>
+      var flag = ""
+      if(BFSearch.isTagedbyKey(bcnot,bcgoal,p.RelList) || BFSearch.isTagedbyKey(bcgoal,bcnot,p.RelList))
+      {
+        flag = "True"
+      }
+      HotelWordCountWithWriting(p.hotelid,"",flag,p.writing)
+    }
+    InsertHotelKeyWordCountDataByRuleWithWriting(formatedRDD,cmdidx)
   }
 
 }
