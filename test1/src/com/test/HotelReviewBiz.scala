@@ -80,9 +80,9 @@ object HotelReviewBiz {
   def  gen2013: Unit ={
     val sc = new SparkContext()
 
-    val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj.txt"
-    val saved2013ObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt"
-    val writing2013:String = "hdfs://hadoop:8020/spark/hotelReview/hr2013.rpt"
+    val savedObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj1.txt"
+    val saved2013ObjectFileName: String = "hdfs://hadoop:8020/spark/hotelReview/SSRDD_13_obj2.txt"
+    val writing2013:String = "hdfs://hadoop:8020/spark/hotelReview/hr2013_2.rpt"
     val hrRDD: RDD[ShortSentence] = sc.objectFile(savedObjectFileName)
 
     val wRDD = sc.textFile(writing2013).map(w=>(w,0))
@@ -130,7 +130,8 @@ object HotelReviewBiz {
   }
 
   def main(args: Array[String]) {
-
+  //  gen2013
+   // return
 
   //  testExpress();
    // return ;
